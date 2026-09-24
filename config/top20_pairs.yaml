@@ -1,0 +1,76 @@
+# ============================================================================
+# TOP 20 CoinDCX FUTURES PAIRS  (master prompt §4)
+# ----------------------------------------------------------------------------
+# The bot operates ONLY on this list. Pairs are NEVER hardcoded in the codebase;
+# every module reads them from here.
+#
+# EVERY pair MUST be validated at startup against BOTH venues:
+#   1. CoinDCX: symbol present in
+#      GET /exchange/v1/derivatives/futures/data/active_instruments   [VERIFIED]
+#   2. CoinDCX: contract metadata from
+#      GET /exchange/v1/derivatives/futures/data/instrument?pair=...  [VERIFIED]
+#      -> price_increment, quantity_increment, min_trade_size, min_notional,
+#         maker_fee, taker_fee, funding_frequency
+#   3. Binance: symbol present in GET /fapi/v1/exchangeInfo             [VERIFIED]
+# If any validation fails -> NO SIGNAL for that pair. The pair is NEVER silently
+# replaced by a "similar" symbol.
+# ============================================================================
+
+pairs:
+  - {coindcx: B-BTC_USDT,    binance: BTCUSDT,    tier: MAJOR}
+  - {coindcx: B-ETH_USDT,    binance: ETHUSDT,    tier: MAJOR}
+  - {coindcx: B-SOL_USDT,    binance: SOLUSDT,    tier: MAJOR}
+  - {coindcx: B-BNB_USDT,    binance: BNBUSDT,    tier: MAJOR}
+  - {coindcx: B-XRP_USDT,    binance: XRPUSDT,    tier: MAJOR}
+  - {coindcx: B-DOGE_USDT,   binance: DOGEUSDT,   tier: MAJOR}
+  - {coindcx: B-ADA_USDT,    binance: ADAUSDT,    tier: MAJOR}
+  - {coindcx: B-AVAX_USDT,   binance: AVAXUSDT,   tier: LARGE}
+  - {coindcx: B-LINK_USDT,   binance: LINKUSDT,   tier: LARGE}
+  - {coindcx: B-LTC_USDT,    binance: LTCUSDT,    tier: LARGE}
+  - {coindcx: B-DOT_USDT,    binance: DOTUSDT,    tier: LARGE}
+  - {coindcx: B-TRX_USDT,    binance: TRXUSDT,    tier: LARGE}
+  - {coindcx: B-SUI_USDT,    binance: SUIUSDT,    tier: LARGE}
+  - {coindcx: B-APT_USDT,    binance: APTUSDT,    tier: LARGE}
+  - {coindcx: B-ARB_USDT,    binance: ARBUSDT,    tier: LARGE}
+  - {coindcx: B-OP_USDT,     binance: OPUSDT,     tier: LARGE}
+  - {coindcx: B-TON_USDT,    binance: TONUSDT,    tier: LARGE}
+  - {coindcx: B-NEAR_USDT,   binance: NEARUSDT,   tier: LARGE}
+  - {coindcx: B-ATOM_USDT,   binance: ATOMUSDT,   tier: MID}
+  - {coindcx: B-BCH_USDT,    binance: BCHUSDT,    tier: MID}
+
+validation:
+  require_coindcx_instrument: true
+  require_binance_symbol: true
+  require_positive_tick: true
+  require_min_notional: true
+  on_failure: NO_SIGNAL          # never a substitute pair, never a guess
+  never_silently_substitute: true
+  refresh_seconds: 3600          # re-pin ticks/notional on contract-spec change
+
+# ---------------------------------------------------------------------------
+# Venue-level defaults.
+#
+# VERIFIED 2026-09-22 from CoinDCX GET /derivatives/futures/data/instrument
+# (the specification records these verbatim for the sampled contracts):
+#   maker_fee 0.0236 %   taker_fee 0.059 %   funding_frequency 4
+#   min_notional 6.0 USDT  settle/quote/margin currency USDT  kind perpetual
+#
+# These are DEFAULTS ONLY. Per-pair values read from /instrument at startup
+# override them, and a pair is dropped if the live read fails.
+# Per-pair price_increment / quantity_increment / min_trade_size below are
+# NOT VERIFIED for every contract and are therefore marked provisional.
+# ---------------------------------------------------------------------------
+fee_defaults:
+  maker_fee_pct: 0.0236
+  taker_fee_pct: 0.059
+  funding_frequency: 4
+  min_notional: 6.0
+  quote_currency: USDT
+  settle_currency: USDT
+  kind: perpetual
+  verified_at: "2026-09-22"
+  per_pair_precision_status: PROVISIONAL   # overridden by live /instrument read
+
+# Optional provisional precision overrides. Empty on purpose: the runtime
+# validator is the single source of truth (fail-closed if it cannot read).
+precision_overrides: {}

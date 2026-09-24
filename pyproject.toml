@@ -1,0 +1,87 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "coindcx-top20-signal-bot"
+version = "1.1.0"
+description = "Signal-only crypto futures intelligence bot for the TOP-20 CoinDCX USDT-margined perpetuals, validated against Binance USDs-M data. Holds no trading key and cannot place orders."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "Quant Infrastructure" }]
+keywords = ["crypto", "futures", "signals", "coindcx", "binance", "microstructure"]
+classifiers = [
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Intended Audience :: Financial and Insurance Industry",
+  "Topic :: Office/Business :: Financial :: Investment",
+]
+dependencies = [
+  "aiohttp>=3.9,<4.0",
+  "aiofiles>=23.2",
+  "httpx>=0.27",
+  "feedparser>=6.0.11",
+  "PyYAML>=6.0",
+  "pydantic>=2.7",
+  "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.23", "ruff>=0.5", "black>=24.4"]
+
+[project.urls]
+Documentation = "docs/ARCHITECTURE.md"
+
+[tool.setuptools]
+packages = ["app", "app.core", "app.data", "app.data.binance", "app.data.coindcx", "app.news",
+            "app.strategies", "app.risk", "app.signals", "app.telegram", "app.database",
+            "app.backtest", "app.monitoring", "app.utils"]
+
+# ---------------------------------------------------------------------------
+# TOOLING
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+asyncio_mode = "auto"
+filterwarnings = ["ignore::DeprecationWarning"]
+markers = [
+  "network: hits a real external endpoint (deselected by default; see docs/DEPLOYMENT.md)",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = ["data", "logs", ".venv", "__pycache__"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "ARG", "PTH", "PL", "RUF", "S"]
+ignore = [
+  "PLR2004", # magic values: all thresholds live in config/*.yaml and are validated in app/config.py
+  "PLR0911", "PLR0917", "PLR0912", "PLR0915", # guard/verdict functions are intentionally branchy
+  "UP042",   # str-valued Enums kept for JSON payload stability
+  "PLC0415", # deliberate lazy imports (feedparser, optional deps, import-cycle avoidance)
+  "C408", "C416", "B905", "SIM105", "PTH123", "E741", "N818", "ARG001", "ARG002", "ARG005",
+  "B007", "E501", "PLR0913", "RUF022", "RUF059", "RUF005", "RUF046", "RUF001", "PTH118", "PTH120",
+  "S101", # asserts are internal fail-closed invariants (boot assert, adapter guards), not input validation
+  "S105", "S106", # flagged strings are enum values ("PASS") and redaction placeholders, not credentials
+  "S110", # best-effort cleanup paths; failure is already logged by the caller
+  "S311", # pseudo-random use is confined to the backtester fill/drift model (non-cryptographic by design)
+  "S314", "S324", # stdlib XML feed parsing + sha1 headline hashing for dedupe keys (never security-critical)
+  "S608", # SQL is assembled only from the fixed internal table whitelist, never from external input
+  "N817",
+  "SIM102", # guard readability: split conditions carry separate evidence comments
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG001", "ARG002", "S101", "PLR2004", "E402", "PT011", "PT012", "PT018", "SIM300"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+extend-exclude = "data|logs"

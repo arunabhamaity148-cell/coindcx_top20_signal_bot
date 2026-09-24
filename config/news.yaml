@@ -1,0 +1,136 @@
+# ============================================================================
+# NEWS ENGINE CONFIGURATION
+# FINAL_DELIVERABLE sections F/G/H. Zero paid dependency.
+# ============================================================================
+
+news:
+  enabled: true
+  min_sources_healthy: 2             # below this -> NO TRADE (fail-closed)
+  poll_sec: 60
+  lookback_min: 720                  # 12 h harvest window
+  max_items_per_source: 60
+  user_agent: "coindcx-top20-signal-bot/1.0 (+research; contact operator)"
+
+  # ---- SOURCES ------------------------------------------------------------
+  # tier 1 = PRIMARY_OFFICIAL (credibility 1.00)
+  # tier 2 = REPUTABLE_SECONDARY (credibility 0.80)
+  # tier 4 = SOCIAL_DISCOVERY (credibility 0.30, can NEVER raise HIGH/CRITICAL)
+  sources:
+    - {id: cftc,    tier: 1, type: rss, status: VERIFIED,
+       url: "https://www.cftc.gov/RSS/RSSGP/rssgp.xml"}
+    - {id: sec,     tier: 1, type: rss, status: VERIFIED,
+       url: "https://www.sec.gov/news/pressreleases.rss"}
+    - {id: fed,     tier: 1, type: rss, status: VERIFIED,
+       url: "https://www.federalreserve.gov/feeds/press_all.xml"}
+    - {id: coindesk, tier: 2, type: rss, status: VERIFIED,
+       url: "https://www.coindesk.com/arc/outboundfeeds/rss/"}
+    - {id: gdelt,   tier: 2, type: json, status: VERIFIED,
+       url: "https://api.gdeltproject.org/api/v2/doc/doc",
+       query: "(bitcoin OR ethereum OR crypto) sourcelang:english",
+       mode: "ArtList", format: "json", maxrecords: 50}
+    # UNPROVEN this build -> disabled until a probe test converts them to VERIFIED
+    - {id: binance_announcements, tier: 1, type: rss, status: UNPROVEN, enabled: false,
+       url: "https://www.binance.com/en/support/announcement/rss"}
+    - {id: coindcx_blog, tier: 1, type: rss, status: UNPROVEN, enabled: false,
+       url: "https://coindcx.com/blog/feed/"}
+    - {id: theblock, tier: 2, type: rss, status: UNPROVEN, enabled: false,
+       url: "https://www.theblock.co/rss.xml"}
+    - {id: decrypt, tier: 2, type: rss, status: UNPROVEN, enabled: false,
+       url: "https://decrypt.co/feed"}
+
+  # ---- CREDIBILITY HIERARCHY (section G) ----------------------------------
+  credibility:
+    tier_scores: {1: 1.00, 2: 0.80, 4: 0.30}
+    multi_source_bonus: {2: 0.15, 3: 0.25}
+    corroboration_cap: 1.00
+    # can_raise_high(tier, corroborating) = (tier <= 2) and (corroborating >= 1)
+    high_critical_max_tier: 2
+    high_critical_min_corroboration: 1
+
+  # ---- IMPACT MODEL (section H) -------------------------------------------
+  # impact = max(category_weight) * credibility * (0.5 + 0.5*novelty)
+  #          * (1.15 if market_wide else 1.0) * liquidity_sensitivity  -> clip [0,1]
+  category_weights:
+    BLACK_SWAN: 1.00
+    FED: 0.95
+    FOMC: 0.95
+    HACK: 0.95
+    EXPLOIT: 0.95
+    STABLECOIN: 0.90
+    ETF: 0.85
+    MACRO: 0.85
+    SEC: 0.85
+    REGULATION: 0.80
+    GEOPOLITICAL: 0.80
+    CFTC: 0.75
+    EXCHANGE: 0.70
+    DELISTING: 0.65
+    LIQUIDATION: 0.60
+    INSTITUTIONAL: 0.60
+    LISTING: 0.50
+    WHALE: 0.45
+    TOKEN_UNLOCK: 0.40
+    MINING: 0.35
+    RISK_ON: 0.35
+    RISK_OFF: 0.35
+    MAJOR_CORPORATE_EVENT: 0.55
+    GENERAL: 0.30
+
+  half_life_min:
+    BLACK_SWAN: 480
+    FED: 240
+    FOMC: 240
+    ETF: 180
+    SEC: 180
+    STABLECOIN: 180
+    CFTC: 120
+    EXCHANGE: 120
+    MACRO: 120
+    HACK: 90
+    EXPLOIT: 90
+    DEFAULT: 60
+
+  severity_thresholds:
+    critical: 0.80
+    high: 0.60
+    medium: 0.35
+
+  market_wide_multiplier: 1.15
+  novelty_lookback_hours: 72
+  dedupe:
+    similarity_threshold: 0.82
+    simhash_bits: 64
+    window_min: 720
+
+  # ---- NEWS STATE -> G4 ---------------------------------------------------
+  state:
+    block_severities: [CRITICAL]
+    degrade_severities: [HIGH]
+    blackout_after_release_sec: 120
+    decay_floor: 0.05                # below this a decayed item stops steering
+
+  categories:   # full 17+ taxonomy implemented in news/parser.py
+    - REGULATION
+    - ETF
+    - FED
+    - FOMC
+    - MACRO
+    - SEC
+    - CFTC
+    - EXCHANGE
+    - HACK
+    - EXPLOIT
+    - LIQUIDATION
+    - WHALE
+    - LISTING
+    - DELISTING
+    - TOKEN_UNLOCK
+    - STABLECOIN
+    - MINING
+    - INSTITUTIONAL
+    - GEOPOLITICAL
+    - RISK_ON
+    - RISK_OFF
+    - BLACK_SWAN
+    - MAJOR_CORPORATE_EVENT
+    - GENERAL

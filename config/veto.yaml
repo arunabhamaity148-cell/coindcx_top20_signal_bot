@@ -1,0 +1,72 @@
+# ============================================================================
+# VETO SYSTEM CONFIGURATION
+# FINAL_DELIVERABLE section E + DESIGN_SPEC section 3/7.
+#
+# `hard_block: true` and `override_allowed: false` are structural: no strategy
+# score can ever override a hard block. The VetoEngine additionally treats ANY
+# guard exception as a BLOCK (fail-closed).
+# ============================================================================
+
+veto:
+  hard_block: true
+  override_allowed: false
+  fail_closed_on_guard_exception: true
+  min_sources_healthy: 2
+
+  # ---- HARD BLOCK guards (top 5) -----------------------------------------
+  data_integrity:                    # G1
+    max_tick_staleness_ms: 3000
+    min_sources_healthy: 2
+    max_clock_drift_ms: 1500
+    require_orderbook: true
+    require_instrument_metadata: true
+
+  divergence:                        # G2
+    block_z: 3.0
+    degrade_z: 2.0
+    require_min_history_obs: 60
+
+  liquidity:                         # G3
+    max_spread_bps: 12.0
+    min_depth_usd_within_50bps: 150000.0
+    max_book_imbalance: 0.85
+    depth_band_bps: 50.0
+
+  news_shock:                        # G4
+    block_severities: [CRITICAL]
+    degrade_severities: [HIGH]
+    blackout_after_release_sec: 120
+    require_min_healthy_sources: 2
+
+  crowding:                          # G5
+    max_funding_z: 2.5
+    max_oi_pct_rank: 0.97
+    require_both_conditions: true
+
+  # ---- DEGRADE tier (confidence -0.15, never blocks outright) -------------
+  degrade_tier:
+    confidence_penalty: 0.15
+    structure_invalidation:          # G6
+      enabled: true
+      min_structure_agreement: true
+    extreme_volatility:              # G7
+      enabled: true
+      realized_vol_max: 1.50
+      atr_pct_rank_max: 0.995
+    btc_regime_conflict:             # G8
+      enabled: true
+    orderbook_instability:           # G10
+      enabled: true
+      mid_jump_bps_max: 20.0
+    duplicate_anti_chase:            # G11
+      enabled: true
+      block_if_live_signal: true
+      block_if_price_outside_zone: true
+    spread_expansion:                # G12
+      enabled: true
+      spread_multiplier: 1.5
+
+  # Guards that escalate to BLOCK when their condition is met outright
+  escalation:
+    structure_break_to_block: false   # spec: structure break = DANGER advisory
+    spread_expansion_to_block: true   # spec §8/A FMM: spread > 1.5x limit -> BLOCK

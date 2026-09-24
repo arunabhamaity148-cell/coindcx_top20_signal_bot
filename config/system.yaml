@@ -1,0 +1,127 @@
+# ============================================================================
+# SYSTEM / EXCHANGE / NORMALIZATION / TELEGRAM / BACKTEST CONFIGURATION
+# Mirrors FINAL_DELIVERABLE §W and DESIGN_SPEC §0.
+# ============================================================================
+
+system:
+  mode: signal_only                 # asserted at boot; anything else = fatal exit
+  fail_closed: true                 # asserted at boot
+  why_message_budget_sec: 10        # WHY block must follow the signal within 10 s
+  boot_assertion: true
+  forbidden_capabilities:
+    - place_order
+    - create_order
+    - cancel_order
+    - modify_order
+    - close_position
+    - set_leverage
+    - create_order_list
+    - withdraw
+    - transfer
+    - transfer_funds
+  # Exchanges whose TRADING credentials must never be present in the env.
+  forbidden_credential_env:
+    - BINANCE_API_KEY
+    - BINANCE_API_SECRET
+    - BINANCE_FUTURES_API_KEY
+    - BINANCE_FUTURES_API_SECRET
+    - COINDCX_API_KEY
+    - COINDCX_API_SECRET
+    - COINDCX_SECRET_KEY
+    - COINDCX_API_SECRET_KEY
+  # Telegram is a DELIVERY channel, not a trading credential: allowed.
+  allowed_credential_env:
+    - TELEGRAM_BOT_TOKEN
+    - TELEGRAM_CHAT_ID
+
+exchanges:
+  binance:
+    role: primary_market_data
+    rest_base: https://fapi.binance.com
+    ws_public_base: wss://fstream.binance.com/public/ws
+    ws_routed_paths: [/public/ws, /market/ws, /public/stream, /market/stream]
+    rate_limit_weight_per_min: 2400         # VERIFIED from /fapi/v1/exchangeInfo
+    weight_budget_fraction: 0.80            # refuse requests beyond 80 % of budget
+    ping_interval_sec: 20
+    reconnect_backoff_sec: [1, 2, 5, 10, 30]
+    jitter: 0.30
+    verified_endpoints:
+      - {path: /fapi/v1/ping, status: VERIFIED}
+      - {path: /fapi/v1/exchangeInfo, status: VERIFIED}
+      - {path: /fapi/v1/openInterest, status: VERIFIED}
+      - {path: /fapi/v1/fundingRate, status: VERIFIED}
+      - {path: /fapi/v1/premiumIndex, status: VERIFIED}
+      - {path: /fapi/v1/klines, status: VERIFIED}
+      - {path: /fapi/v1/ticker/bookTicker, status: VERIFIED}
+      - {path: /fapi/v1/depth, status: VERIFIED}
+      - {path: /futures/data/openInterestHist, status: UNPROVEN}
+      - {path: /futures/data/takerlongshortRatio, status: UNPROVEN}
+      - {path: /futures/data/topLongShortPositionRatio, status: UNPROVEN}
+      - {stream: <symbol>@forceOrder, status: UNPROVEN}
+  coindcx:
+    role: secondary_market_data + execution_reality
+    rest_base: https://api.coindcx.com
+    market_data_base: https://public.coindcx.com
+    poll_sec: 2
+    poll_concurrency: 5
+    exposes_derivatives_metrics: false   # UNPROVEN - no public OI/funding/liquidation
+    public_ws: DOCUMENTED_NOT_USED      # documented market-data WS; deterministic REST poller remains active
+    verified_endpoints:
+      - {path: /exchange/v1/derivatives/futures/data/active_instruments, status: VERIFIED}
+      - {path: /exchange/v1/derivatives/futures/data/instrument, status: VERIFIED}
+      - {path: "https://public.coindcx.com/market_data/v3/orderbook/{instrument}-futures/{depth}", status: VERIFIED}
+      - {path: https://public.coindcx.com/market_data/candlesticks, status: VERIFIED}
+    unverified_endpoints:
+      - {path: public OI / funding / liquidation, status: UNPROVEN}
+      - {path: INR-margin futures at API level, status: UNPROVEN}
+
+normalization:
+  max_clock_drift_ms: 1500
+  min_history_obs: 60                  # < 60 obs => ABNORMAL (fail-closed)
+  divergence_bands:
+    normal: 1.0
+    elevated: 1.0
+    abnormal: 2.0
+    extreme: 3.0
+  stablecoin_cross_symbol: USDCUSDT    # USDT -> USD leg (Binance public)
+  usdt_usd_fallback: 1.0
+  quote_currency: USDT
+  expected_slippage_bps: 3.0
+
+staleness:
+  binance_rest_ms: 3000
+  binance_ws_ms: 3000
+  coindcx_rest_ms: 6000                # 3 x poll interval
+  coindcx_ws_ms: 6000
+  news_ms: 900000
+  min_sources_healthy: 2
+
+telegram:
+  api_base: https://api.telegram.org
+  max_chars: 1024                      # self-imposed ceiling (API max UNPROVEN)
+  per_chat_min_interval_sec: 1.2
+  bulk_messages_per_sec: 25
+  retry_backoff_sec: [2, 5, 15]
+  max_retries: 4
+  dry_run: true                        # live delivery requires an explicit flip
+  group_messages_per_min: 20
+
+backtest:
+  next_bar_fills_only: true            # no look-ahead
+  limit_fill_probability_model: touch_only
+  limit_fill_prob_max: 0.95
+  latency_ms: 250
+  slippage_bps: 3.0
+  spread_cost_bps: 2.0                 # fallback when no book snapshot exists
+  maker_fee_pct: 0.0236
+  taker_fee_pct: 0.059
+  use_taker_for_stop: true
+  warmup_bars: 200
+  walk_forward_folds: 6
+  embargo_pct: 0.01
+
+database:
+  sqlite_path: logs/signal_journal.sqlite
+  jsonl_mirror: true
+  jsonl_path: logs
+  retention_days: 400

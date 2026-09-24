@@ -1,0 +1,117 @@
+# ============================================================================
+# STRATEGY CONFIGURATION - S1..S5
+# Parameters are verbatim from FINAL_DELIVERABLE section D ("EVIDENCE-BASED TOP 5
+# STRATEGIES"). Do not change definitions; tune only the numbered thresholds and
+# document the change in docs/STRATEGIES.md.
+# ============================================================================
+
+common:
+  enabled: [S1, S2, S3, S4, S5]
+  atr_period: 14
+  atr_percentile_lookback: 200
+  min_candles: 60
+  risk_floor_atr_mult: 0.25          # risk = max(entry-SL, 0.25*ATR)
+  tp_r_multiples: [1.0, 2.0, 3.0, 5.0]
+  min_rr_tp2: 1.8                    # hard filter (master §14)
+  timeframes: [1m, 5m, 15m, 1h, 4h]
+
+s1_liquidity_sweep:
+  id: S1
+  name: Liquidity Sweep & Reclaim
+  regimes: [RANGE, CHOP, POST_EVENT]
+  structure_tf: 5m
+  trigger_tf: 1m
+  swing_lookback: 3                  # prior 3-bar swing extreme
+  entry_offset_atr: 0.15             # LONG ref_low + 0.15*ATR
+  sl_buffer_atr: 0.5
+  taker_buy_ratio_long: 0.55         # > 0.55
+  taker_sell_ratio_short: 0.45       # < 0.45
+  max_oi_chg_pct: 0.5                # stop-run, not a real build
+  expiry_min: 45
+  cooldown_min: 60
+  correlation_group: MICRO_LIQUIDITY
+  evidence_channels: [LIQUIDITY_SWEEP, TAKER_FLOW, PRICE_STRUCTURE]
+  tp1_clamp_atr: 1.0                 # TP1 clamped to entry_high + 1*ATR
+  base_confidence: 0.62
+  tp1_take_fraction: 0.40
+
+s2_vol_compression:
+  id: S2
+  name: Volatility Compression -> Range Expansion
+  regimes: [COMPRESSION, RANGE]
+  compression_tf: 15m
+  trigger_tf: 5m
+  range_bars: 60
+  range_width_max_atr_mult: 6.0      # 60-bar range width <= 6 x ATR
+  atr_percentile_max: 0.25
+  expansion_atr_mult: 1.2            # expansion bar > 1.2 x ATR
+  min_oi_chg_pct: 1.0                # OI >= +1.0 %
+  invalidation_atr_mult: 0.9         # 0.9 x ATR back inside the range
+  sl_boundary_buffer_atr: 0.1
+  expiry_min: 45
+  cooldown_min: 60
+  correlation_group: VOLATILITY_STRUCTURE
+  evidence_channels: [VOLATILITY_COMPRESSION, TAKER_FLOW, OI_BUILD]
+  base_confidence: 0.63
+  tp1_take_fraction: 0.40
+
+s3_funding_crowding:
+  id: S3
+  name: Funding / Crowding Exhaustion Reversal
+  regimes: [ANY]
+  context_tf: 1h
+  context_ema_fast: 21
+  context_ema_slow: 55
+  trigger_tf: 5m
+  min_abs_funding_z: 2.0
+  min_oi_pct_rank: 0.85
+  entry_offset_atr: 0.2
+  sl_buffer_atr: 0.6
+  expiry_min: 90
+  cooldown_min: 60
+  correlation_group: POSITIONING_DERIVATIVES
+  evidence_channels: [FUNDING_CROWDING, OI_POSITIONING, STRUCTURE_FAILURE]
+  base_confidence: 0.60
+  tp1_mechanical: true               # TP1 must be taken mechanically (squeezes are fast)
+  tp1_take_fraction: 0.40
+
+s4_oi_trend:
+  id: S4
+  name: OI-Confirmed Trend Continuation
+  regimes: [TREND_UP, TREND_DOWN, RISK_ON, RISK_OFF]
+  trend_tf: 4h
+  pullback_tf: 15m
+  pullback_lookback_bars: 3
+  trigger_tf: 5m
+  ema_fast: 21
+  ema_slow: 55
+  min_oi_chg_pct: 0.5                # OI > +0.5 %
+  anti_chase_atr: 0.5                # skip if price > 0.5*ATR beyond fast EMA
+  sl_buffer_atr: 0.2
+  sl_stop_atr_mult: 0.6
+  expiry_min: 45
+  cooldown_min: 60
+  correlation_group: TREND_DERIVATIVES
+  evidence_channels: [HTF_TREND, PULLBACK_STRUCTURE, OI_BUILD, TAKER_FLOW]
+  base_confidence: 0.61
+  tp1_take_fraction: 0.40
+
+s5_basis_convergence:
+  id: S5
+  name: Cross-Venue Basis Convergence
+  regimes: [ANY]
+  trigger_tf: 1m
+  min_abs_z: 2.0                     # eligible from |z| >= 2.0
+  max_abs_z: 3.0                     # |z| >= 3.0 is a VETO, never an opportunity
+  invalidation_pct: 1.0              # +/-1 % adverse move
+  sl_pct: 1.0                        # thesis is convergence, not direction
+  expiry_min: 20                     # fast decay by design
+  cooldown_min: 60
+  correlation_group: CROSS_VENUE
+  evidence_channels: [CROSS_VENUE_BASIS, CONVERGENCE]
+  require_net_edge_positive: true    # only valid if net of fees > 0
+  min_convergence_probability: 0.55 # measured same-symbol reversion probability
+  latency_adverse_selection_bps: 2.0
+  minimum_expected_net_capture_bps: 1.0
+  base_confidence: 0.58
+  tp1_take_fraction: 0.40

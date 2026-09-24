@@ -1,0 +1,84 @@
+# ============================================================================
+# RISK / SIGNAL / COST CONFIGURATION
+# FINAL_DELIVERABLE sections O/P/Q/W and master prompt sections 12-15.
+# ============================================================================
+
+risk:
+  sl_atr_buffer: 0.5                 # SL = structure_invalidation -/+ (0.5 * ATR)
+  sl_floor_atr_mult: 0.25            # risk floored at 0.25*ATR
+  tp_r_multiples: [1.0, 2.0, 3.0, 5.0]
+  min_rr_tp2: 1.8                    # hard filter
+  invalidation_recheck_sec: 15
+
+  # Signal expiry by grade (master prompt §12 / spec §W)
+  signal_expiry_min:
+    A_plus: 90
+    A: 45
+    B: 20
+    default: 45
+
+  cooldown_min_per_symbol: 60
+  duplicate_window_min: 60
+
+  account:
+    max_concurrent_signals: 3
+    max_daily_signals: 6
+    max_daily_loss_R: 2.0
+    max_concurrent_per_correlation_group: 2
+
+  # Advisory sizing only - the bot NEVER places an order.
+  sizing:
+    risk_per_trade_pct: 1.0          # advisory
+    reference_equity_usdt: 1000.0    # advisory, used only to print a suggested size
+    min_trade_size_respected: true
+    min_notional_respected: true
+
+grading:
+  a_plus:
+    min_confidence: 0.82
+    min_engines: 3
+    allow_degrade: false
+  a:
+    min_confidence: 0.66
+    min_engines: 2
+  b:
+    min_confidence: 0.55
+    min_engines: 1
+  # anything below B thresholds -> NO TRADE
+
+consensus:
+  # Strategies that share an information channel must not be counted as
+  # independent confirmations (master prompt §16).
+  correlation_groups:
+    MICRO_LIQUIDITY: [S1]
+    VOLATILITY_STRUCTURE: [S2]
+    POSITIONING_DERIVATIVES: [S3]
+    TREND_DERIVATIVES: [S4]
+    CROSS_VENUE: [S5]
+  max_engines_per_group: 1
+  min_agreeing_engines: 2
+  conflict_requires_agreement: true
+  confidence_weight_by_grade: true
+  min_novel_evidence_ratio: 0.50
+
+btc_regime:
+  symbol: BTCUSDT
+  coindcx_pair: B-BTC_USDT
+  structure_lookback: 60
+  ema_fast: 21
+  ema_slow: 55
+  vol_percentile_high: 0.90
+  vol_percentile_low: 0.20
+  oi_rank_high: 0.95
+  funding_z_abs_high: 2.0
+  strong_trend_atr_mult: 1.5
+  conflict_action: DEGRADE          # spec §15: BLOCK or degrade per specification
+  unknown_action: BLOCK             # BTC regime UNKNOWN -> no signal (fail-closed)
+
+costs:
+  # VERIFIED from CoinDCX /instrument (2026-09-22)
+  maker_fee_pct: 0.0236
+  taker_fee_pct: 0.059
+  round_trip_taker_pct: 0.118
+  slippage_bps: 3.0
+  latency_ms: 250

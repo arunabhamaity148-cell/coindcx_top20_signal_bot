@@ -1,0 +1,69 @@
+# ============================================================================
+# CoinDCX TOP-20 SIGNAL-ONLY FUTURES INTELLIGENCE BOT
+#
+#   docker compose up -d          start (dry-run Telegram by default)
+#   docker compose logs -f        follow the structured JSON logs
+#   docker compose down           stop
+#
+# There is no trading capability anywhere in this stack: the bot holds no
+# exchange key, and BINANCE_/COINDCX_ trading credentials are deliberately NOT
+# declared here. Adding one makes the boot assertion abort the process.
+# ============================================================================
+services:
+  signal-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: coindcx-top20-signal-bot:1.0.0
+    container_name: coindcx-signal-bot
+    restart: unless-stopped
+    env_file:
+      - .env            # copy .env.example -> .env; only Telegram values belong here
+    environment:
+      SIGNAL_BOT_MODE: signal_only
+      CONFIG_DIR: /app/config
+      LOG_DIR: /app/logs
+      # Telegram delivery stays in dry-run unless .env sets DRY_RUN=false AND a
+      # TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID are present.
+    volumes:
+      - ./config:/app/config:ro          # configuration is mounted read-only
+      - ./logs:/app/logs                 # journal (sqlite + jsonl) persists here
+      - ./data:/app/data                 # optional historical datasets
+    read_only: false
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 768M
+    healthcheck:
+      test: ["CMD", "python", "scripts/healthcheck.py", "--quiet"]
+      interval: 5m
+      timeout: 30s
+      start_period: 60s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # Optional one-shot validation job:
+  #   docker compose run --rm validate
+  validate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: coindcx-top20-signal-bot:1.0.0
+    profiles: ["tools"]
+    env_file:
+      - .env
+    volumes:
+      - ./config:/app/config:ro
+      - ./logs:/app/logs
+    command: ["python", "scripts/validate_config.py", "--live"]

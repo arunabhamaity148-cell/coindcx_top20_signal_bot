@@ -1,0 +1,36 @@
+MIT License
+
+Copyright (c) 2026 Quant Infrastructure
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+-------------------------------------------------------------------------------
+ADDITIONAL NOTICE - NOT FINANCIAL ADVICE
+
+This software emits informational trade *signals* for human review. It holds no
+exchange trading credential, cannot place, cancel, modify or close any order,
+cannot change leverage and cannot move funds. It performs no automated
+execution of any kind.
+
+Nothing it produces is investment advice, a recommendation, or a solicitation
+to trade. Crypto derivatives are high-risk instruments that can result in the
+loss of all capital. Market data may be incomplete, delayed or wrong, and any
+performance figure produced by the bundled backtester or walk-forward tooling
+is a historical simulation that does not predict future results. You are solely
+responsible for every order you place. Use at your own risk.
